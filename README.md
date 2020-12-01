@@ -11,7 +11,7 @@ It works by LSTM neurons intreating with a pervious set of data based off the la
 But just an LSTM couldn’t learn enough from the small number of complex data I have (about 200 samples), so I changed learning method to generative adversarial network (GAN). This has the benefit of learning multiply things off the same data, but obviously creates overfitting problems, but for this project I don't care about overfitting if it creates cool sounds.
 A GAN works by having too networks, one that takes noise and tries to generate data and another network that is given the real data and output of the first network and tries to figure out which is real. So I built both networks with a LSTM layer with the same number of nodes as Mel-frequency cepstral coefficients with no output layer for generator and one for discriminator.
 
-200 samples of drum loops were given, e.g.
+145 samples of kick drums were given, e.g.
 
 [Example of data](examples/last.wav)
 <img src="pics/Figure_3.png" width=400 height=400></img>

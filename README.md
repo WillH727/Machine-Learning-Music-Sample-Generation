@@ -15,10 +15,9 @@ A GAN works by having too networks, one that takes noise and tries to generate d
 
 [Example of data](examples/last.wav)
 
-$ wget https://raw.github.com/azer/play-audio/master/dist/play-audio.js
-<script src="play-audio.js"></script>
 <script>
-  playAudio(['examples/last.wav', 'examples/last.wav'])
+var audio = new Audio("https://raw.githubusercontent.com/WillH727/Machine-Learning-Music-Sample-Generation/examples/last.wav")
+audio.play()
 </script>
 
 and the result was this:

@@ -23,8 +23,12 @@ and the result was this:
 
 <img src="pics/Figure_4.png" width=400 height=400></img>
 
+Getting a clearer view of the amplitude of the waveforms:
 
-Then generative sample is very noisy, yet it has learnt generally that low sub travels in after a few milliseconds but has transitioned from the higher pitches like a real kick drum. Overall I was happy with the weird alien sounds from noise and artefacts from learning from the reverb of the drums.
+<img src="pics/Waveforms.PNG" width=400 height=400></img>
+
+Then generative sample is very noisy, yet it has learnt generally that low sub travels in after a few milliseconds but has transitioned from the higher pitches like a real kick drum (likely due to only one LSTM layer used so nodes couldn't communicate between pitches). It also managed to get a good idea of the amplitude envelope but kept randomly repeating it for different pitches creating strange sounds.
+Overall, I was happy with the weird alien sounds from noise and artefacts from learning from the reverb of the drums.
 
 
 Heres the learning progression:

@@ -13,7 +13,10 @@ A GAN works by having too networks, one that takes noise and tries to generate d
 
 200 samples of drum loops were given, e.g.
 
-[elephant](examples/last.wav)
+[Example of data](examples/last.wav)
+
+gem install git-audio-commit
+git audio-commit -m "<text message>" --audio <examples/last.wav>
 
 and the result was this:
 

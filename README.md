@@ -15,8 +15,11 @@ A GAN works by having too networks, one that takes noise and tries to generate d
 
 [Example of data](examples/last.wav)
 
-gem install git-audio-commit
-git audio-commit -m "<text message>" --audio <examples/last.wav>
+$ wget https://raw.github.com/azer/play-audio/master/dist/play-audio.js
+<script src="play-audio.js"></script>
+<script>
+  playAudio(['examples/last.wav', 'examples/last.wav'])
+</script>
 
 and the result was this:
 

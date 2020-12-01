@@ -13,6 +13,8 @@ A GAN works by having too networks, one that takes noise and tries to generate d
 
 200 samples of drum loops were given, e.g.
 
+[elephant](examples/last.wav)
+
 and the result was this:
 
 Clearly there is too much complexcity occuring for the LSTM to pick out on any patterns or alot more data is required.

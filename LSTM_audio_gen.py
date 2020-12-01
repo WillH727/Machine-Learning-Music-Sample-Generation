@@ -3,19 +3,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf 
 import os
-from tqdm import tqdm
-import random
+import time
 
 """
 --Get data set
 """
-batch_size = 5
-
 # hop length is 512 for default
-hop_length = 512
+hop_length = 64
 #default is 2048
-n_fft = 2048
-n_mfcc = 26
+n_fft = 4096
+n_mfcc = 52
 
 mypath = 'C:\\Users\\willi\\Documents\\Python_Scripts\\LSTM_gen\\sample_data'
 
@@ -26,7 +23,7 @@ file_names = [f for f in os.listdir(mypath) if os.path.isfile(os.path.join(mypat
 wf_data = []
 
 for name in file_names:
-	signal, sample_rate = librosa.load(mypath+'\\'+'DNB_BREAK_01.wav')
+	signal, sample_rate = librosa.load(mypath+'\\'+name)
 	
 	samp = librosa.feature.mfcc(signal,
 							 sr=sample_rate,
@@ -36,11 +33,28 @@ for name in file_names:
 	samp = np.transpose(samp)
 	wf_data.append(samp)
 
+def normilize_data(data):
+	norm_value = max([np.amax(np.abs(i)) for i in data])
+	
+	data = [i / norm_value for i in data]
+	
+	return data, norm_value
+
+def denormilize_data(data, norm_value):
+	data = data * norm_value
+	
+	return data
+
+wf_data, norm_value = normilize_data(wf_data)
+
 last_samp_size = len(samp)
 
 samp = np.transpose(samp)
-librosa.display.specshow(samp,sr=sample_rate,hop_length=hop_length)
-plt.show()
+
+for i in range(0,len(wf_data),50):
+	plt.figure()
+	librosa.display.specshow(np.transpose(wf_data[i]),sr=sample_rate,hop_length=hop_length)
+	plt.show()
 
 samp = librosa.feature.inverse.mfcc_to_audio(samp,
 											 sr=sample_rate,
@@ -48,185 +62,147 @@ samp = librosa.feature.inverse.mfcc_to_audio(samp,
 
 librosa.output.write_wav('last.wav', samp, sample_rate)
 
-data_dim = wf_data[0].shape
+train_dataset = [tf.convert_to_tensor(i, dtype=tf.float32) for i in wf_data]
+
 print("Samples Loaded")
 
-def split_arr(arr, sequence_len):
-	no_samples = len(arr)//sequence_len
-	
-	if len(arr) % no_samples != 0:
-		arr = arr[0:no_samples*sequence_len]
-	
-	arr = np.split(arr,no_samples,axis=0)
-	
-	x = np.zeros((no_samples,sequence_len//2,n_mfcc))
-	y = np.zeros((no_samples,sequence_len//2,n_mfcc))
-	
-	for i in range(no_samples):
-		if len(arr[i])%2 != 0:
-			arr[i] = np.delete(arr[i],-1,axis=0)
-		x[i], y[i] = np.split(arr[i],2,axis=0)
-	
-	return x,y
-
-def normilize_data(data):
-	sample_len = min(len(i[:]) for i in data)
-		
-	for i in range(len(data)):
-		data[i] = data[i][0:sample_len]
-	
-	return data
-
-def get_samples(data, batch_size, sequence_len):
-	data = normilize_data(data)
-	
-	random.shuffle(data)
-	
-	x = [split_arr(sample, sequence_len)[0] for sample in data]
-	y = [split_arr(sample, sequence_len)[1] for sample in data]
-	#(no_sets_of_seq,no_of_seq, len_squ, n_mfcc)
-	
-	x = np.reshape(x,(len(x)*len(x[0]),sequence_len//2,n_mfcc))
-	y = np.reshape(y,(len(y)*len(y[0]),sequence_len//2,n_mfcc))
-	#(no_sets_of_seq*no_of_seq, len_squ, n_mfcc)
-	
-	x_batches = []
-	y_batches = []
-	
-	for i in range(len(x)//batch_size):
-		x_batches.append(tf.convert_to_tensor(
-			[x[batch_size*i+j] for j in range(batch_size)]))
-		y_batches.append(tf.convert_to_tensor(
-			[y[batch_size*i+j] for j in range(batch_size)]))
-	
-	return x_batches, y_batches
-
-
 """
---Make model
+--Build models
 """
-def build_model(rnn_units,batch_size,data_dim):
-	model = tf.keras.Sequential([
-		#input layer
-		tf.keras.layers.Dense(rnn_units,
-							batch_input_shape=[batch_size, None, data_dim[1]]),
-		
-		#LSTM layer
+noise_feat = 26
+
+def build_generator(rnn_units):
+	model = tf.keras.Sequential([		
 		tf.keras.layers.LSTM(
-			rnn_units, 
-			return_sequences=True, 
-			recurrent_initializer='glorot_uniform',
-			recurrent_activation='sigmoid',
-			stateful=True,
-			),
-		tf.keras.layers.Dropout(0.2),
-		
-		tf.keras.layers.Dense(rnn_units, activation='relu'),
-		
-		#output layer
-		tf.keras.layers.Dense(data_dim[1])
+			n_mfcc, 
+			return_sequences=True,
+			stateful=True
+			)
 		])
 	return model
-	
+
+def build_discriminator(rnn_units):
+	model = tf.keras.Sequential([		
+		tf.keras.layers.LSTM(
+			n_mfcc, 
+			return_sequences=True,
+			stateful=True
+			),
+		
+		tf.keras.layers.Dense(1)
+		
+		])
+	return model
 
 """
 --Train model
 """
-sequence_len = 20
+rnn_units = 26
+learning_rate = 1e-3
 
-x_data, y_data = get_samples(wf_data, batch_size, sequence_len)
+generator = build_generator(rnn_units)
+discriminator = build_discriminator(rnn_units)
 
+generator_optimizer = tf.keras.optimizers.Adam(learning_rate)
+discriminator_optimizer = tf.keras.optimizers.Adam(learning_rate)
 
-# Optimization parameters:
-num_training_iterations = len(x_data)
-learning_rate = 1e-2
-
-rnn_units = 4096
-
-# Checkpoint location: 
 checkpoint_dir = './training_checkpoints'
-checkpoint_prefix = os.path.join(checkpoint_dir, "my_ckpt")
+checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
+checkpoint = tf.train.Checkpoint(generator_optimizer=generator_optimizer,
+                                 discriminator_optimizer=discriminator_optimizer,
+                                 generator=generator,
+                                 discriminator=discriminator)
 
-model = build_model(rnn_units,batch_size,data_dim)
-optimizer = tf.keras.optimizers.Adam(learning_rate)
+noise_dim = [1, 20, noise_feat]
+noise_dim_tf = tf.convert_to_tensor([1, 10, noise_feat],dtype=tf.int32)
+
+# We will reuse this seed overtime (so it's easier)
+# to visualize progress in the animated GIF)
+seed = tf.random.normal(noise_dim)
 
 @tf.function
-def train_step(x, y): 
-	# Use tf.GradientTape()
-	with tf.GradientTape() as tape:
-		
-		y_hat = model(x)
-		
-		loss = tf.keras.losses.mse(y,y_hat)
-		
-	grads = tape.gradient(loss, model.trainable_variables)
+def train_step(sample,sample_noise):
 	
-	# Apply the gradients to the optimizer so it can update the model accordingly
-	optimizer.apply_gradients(zip(grads, model.trainable_variables))
-	return loss
+	cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 
-history = []
-i = 0
+	def discriminator_loss(real_output, fake_output):
+	    real_loss = cross_entropy(tf.ones_like(real_output), real_output)
+	    fake_loss = cross_entropy(tf.zeros_like(fake_output), fake_output)
+	    total_loss = real_loss + fake_loss
+	    return total_loss
 
-for iter in tqdm(range(num_training_iterations)):	
-	loss = train_step(x_data[i], y_data[i])
-	history.append(loss.numpy().mean())
-	i += 1
-	if iter % 100 == 0:
-		model.save_weights(checkpoint_prefix)
-
-model.save_weights(checkpoint_prefix)
-
-plt.figure()
-plt.plot(history)
-plt.show()
-
-"""
---Generate sounds
-"""
-
-model = build_model(rnn_units,1,data_dim)
-
-# Restore the model weights for the last checkpoint after training
-model.load_weights(tf.train.latest_checkpoint(checkpoint_dir))
-model.build(tf.TensorShape([1, None, data_dim[1]]))
-
-def generate_sample(model, starting_value,generation_length,data_dim):
+	def generator_loss(fake_output):
+	    return cross_entropy(tf.ones_like(fake_output), fake_output)
 	
-	input_eval = tf.expand_dims(starting_value,0)
-	generated_wf = np.zeros((generation_length,data_dim[1]))
+	with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
+		generated_samps = generator(sample_noise, training=True)
+		real_output = discriminator(sample, training=True)
+		fake_output = discriminator(generated_samps, training=True)
+
+		gen_loss = generator_loss(fake_output)
+		disc_loss = discriminator_loss(real_output, fake_output)
+
+	gradients_of_generator = gen_tape.gradient(gen_loss, generator.trainable_variables)
+	gradients_of_discriminator = disc_tape.gradient(disc_loss, discriminator.trainable_variables)
 	
-	model.reset_states()
-	tqdm._instances.clear()
+	generator_optimizer.apply_gradients(zip(gradients_of_generator, generator.trainable_variables))
+	discriminator_optimizer.apply_gradients(zip(gradients_of_discriminator, discriminator.trainable_variables))
 	
-	for i in tqdm(range(generation_length)):
-		
-		prediction = model(input_eval)
-		
-		prediction = tf.squeeze(prediction,0)
-		
-		generated_wf[i] = prediction
-		
-		input_eval = tf.expand_dims(prediction, 0)
+	return gen_loss, disc_loss
 	
-	return generated_wf
-
-start = 50*np.random.rand(1,data_dim[1])
-#start = np.zeros((1,data_dim[1]))
-
-gen = generate_sample(model,start, last_samp_size, data_dim)
-
-check = gen
-
-gen = np.transpose(gen)
-
-plt.figure()
-librosa.display.specshow(gen,sr=sample_rate,hop_length=hop_length)
-plt.show()
-
-gen = librosa.feature.inverse.mfcc_to_audio(gen,
+def generate_audio(model, test_input):
+	# Notice `training` is set to False.
+	# This is so all layers run in inference mode (batchnorm).
+	predictions = model(test_input, training=False)
+	
+	audio_pred = np.transpose(predictions.numpy()[0])
+	
+	audio_pred_n = denormilize_data(audio_pred, norm_value)
+	
+	audio_raw = librosa.feature.inverse.mfcc_to_audio(audio_pred_n,
 											 sr=sample_rate,
 											 n_fft=n_fft)
 
-librosa.output.write_wav('gen.wav', gen, sample_rate)
+	librosa.output.write_wav('generated.wav', audio_raw, sample_rate)
+	
+	plt.figure()
+	librosa.display.specshow(audio_pred_n,sr=sample_rate,hop_length=hop_length)
+	plt.show()
 
+
+def train(dataset, epochs):
+	
+	gen_loss_arr = []
+	discr_loss_arr = []
+	
+	for epoch in range(epochs):
+		start = time.time()
+		
+		for train_samp in train_dataset:
+			noise = tf.random.normal([1, train_samp.shape[0], noise_feat])
+			train_samp = tf.expand_dims(train_samp, axis=0)
+			gen_loss, discr_loss = train_step(train_samp, noise)
+			gen_loss_arr.append(gen_loss)
+			discr_loss_arr.append(discr_loss)
+		
+		# Save the model every 15 epochs
+		if (epoch + 1) % 15 == 0:
+			checkpoint.save(file_prefix = checkpoint_prefix)
+  
+		print ('Time for epoch {} is {} sec'.format(epoch + 1, time.time()-start))
+	
+	# Generate after the final epoch
+	generate_audio(generator,seed)
+	
+	plt.figure()
+	plt.subplot(211)
+	plt.plot(gen_loss_arr)
+	plt.xlabel('Gen Loss')
+	plt.subplot(212)
+	plt.plot(discr_loss_arr)
+	plt.xlabel('Discr Loss')
+	plt.show()
+
+EPOCHS = 150
+#get more data
+train(train_dataset, EPOCHS)

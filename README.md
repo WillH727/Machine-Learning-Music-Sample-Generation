@@ -14,6 +14,7 @@ A GAN works by having too networks, one that takes noise and tries to generate d
 145 samples of kick drums were given, e.g.
 
 [Example of data](examples/last.wav)
+
 <img src="pics/Figure_3.png" width=400 height=400></img>
 
 and the result was this:
@@ -22,9 +23,12 @@ and the result was this:
 
 <img src="pics/Figure_4.png" width=400 height=400></img>
 
-Then generative sample is very noisy, yet it has learnt generally that low sub travels in after a few milliseconds but has transitioned from the higher pitches like a real kick drum.
+
+Then generative sample is very noisy, yet it has learnt generally that low sub travels in after a few milliseconds but has transitioned from the higher pitches like a real kick drum. Overall I was happy with the weird alien sounds from noise and artefacts from learning from the reverb of the drums.
+
 
 Heres the learning progression:
+
 <img src="pics/Figure_5.png" width=400 height=400></img>
 
 # Convolutional GAN

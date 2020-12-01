@@ -19,7 +19,9 @@ A GAN works by having too networks, one that takes noise and tries to generate d
 and the result was this:
 
 [Generative data](examples/gen.wav)
+
 <img src="pics/Figure_4.png" width=400 height=400></img>
+
 Then generative sample is very noisy, yet it has learnt generally that low sub travels in after a few milliseconds but has transitioned from the higher pitches like a real kick drum.
 
 Heres the learning progression:

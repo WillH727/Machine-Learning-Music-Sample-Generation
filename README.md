@@ -14,15 +14,19 @@ A GAN works by having too networks, one that takes noise and tries to generate d
 200 samples of drum loops were given, e.g.
 
 [Example of data](examples/last.wav)
-
+<img src="pics/Figure_3.png" width=400 height=400></img>
 
 and the result was this:
 
-Clearly there is too much complexcity occuring for the LSTM to pick out on any patterns or alot more data is required.
+[Generative data](examples/gen.wav)
+<img src="pics/Figure_4.png" width=400 height=400></img>
+Then generative sample is very noisy, yet it has learnt generally that low sub travels in after a few milliseconds but has transitioned from the higher pitches like a real kick drum.
 
-# Generative adversarial network
+Heres the learning progression:
+<img src="pics/Figure_5.png" width=400 height=400></img>
 
-Now having a look at the mel data,
+# Convolutional GAN
+WIP
 
-its clear that the fed data looks more like an image to maybe a GAN (generative adversarial network) which be a much more natural fit.
-A GAN works by having 2 neuro netoworks at feed back off each other, one tries to generate convolutions and build and image; the other tries to tell the real image from the fake image produce and each is back probagated based off this result.
+# Synth controlled ML
+WIP
